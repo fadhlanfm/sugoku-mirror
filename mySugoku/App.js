@@ -6,7 +6,7 @@ import store from './store'
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text>App.js to start working on your app!</Text>
+      <Text>App.js start working on your app!</Text>
     </View>
   );
 }
