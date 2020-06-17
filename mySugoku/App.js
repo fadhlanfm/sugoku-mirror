@@ -1,13 +1,24 @@
 import React from 'react';
-import { Provider } from 'react-redux'
 import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';Provider 
+import { Provider } from 'react-redux'
 import store from './store'
+import { Home, Game, Finish } from './screens'
+
+const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>App.js start working on your app!</Text>
-    </View>
+    <Provider store={ store }>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen name="Home" component={ Home } />
+          <Stack.Screen name="Game" component={ Game } />
+          <Stack.Screen name="Finish" component={ Finish } />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </Provider>
   );
 }
 
