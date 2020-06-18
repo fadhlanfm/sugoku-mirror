@@ -1,12 +1,55 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, Button, TextInput, StyleSheet, Dimensions } from 'react-native'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchBoard, updateBoard } from '../store/actions'
+import { fetchBoard, updateBoard, submitSudoku, solveSudoku } from '../store/actions/board'
 
-export default function Game({ navigation, route }) {
+export default function Game({ navigation: { navigate }, route }) {
   const { username, level } = route.params
-  const board = useSelector(state => state.board)
+  const board = useSelector(state => state.boardReducer.board)
+  const shadowBoard = useSelector(state => state.boardReducer.shadowBoard)
+  const [shadow, setShadow] = useState(shadowBoard)
   const dispatch = useDispatch()
+
+  const solve = () => {
+    const answer = { board: shadowBoard }
+    const encodeBoard = (board) => board.reduce((result, row, i) => result + `%5B${encodeURIComponent(row)}%5D${i === board.length - 1 ? '' : '%2C'}`, '')
+    const encodeParams = (params) =>
+      Object.keys(params)
+          .map(key => key + '=' + `%5B${encodeBoard(params[key])}%5D`)
+          .join('&');
+    fetch(`https://sugoku2.herokuapp.com/solve`, {
+      method: 'POST',
+      body: encodeParams(answer),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+      .then(response => response.json())
+      .then(result => {
+        setShadow(result.solution)
+        alert('The sudoku has been solved by helper')
+      })
+      .catch(console.log)
+  }
+
+  const validate = () => {
+    const answer = { board: shadow }
+    const encodeBoard = (board) => board.reduce((result, row, i) => result + `%5B${encodeURIComponent(row)}%5D${i === board.length - 1 ? '' : '%2C'}`, '')
+    const encodeParams = (params) =>
+      Object.keys(params)
+        .map(key => key + '=' + `%5B${encodeBoard(params[key])}%5D`)
+        .join('&');
+
+    fetch(`https://sugoku2.herokuapp.com/validate`, {
+      method: 'POST',
+      body: encodeParams(answer),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+      .then(response => response.json())
+      .then(result => {
+        result.status === 'solved' ? navigate('Finish', { username }) : alert(`The sudoku hasn't been solved.`)
+      })
+      .catch(console.log)
+  }
+  
 
   useEffect(() => {
     dispatch(fetchBoard(level))
@@ -20,20 +63,21 @@ export default function Game({ navigation, route }) {
     <View style={ styles.container }>
       <Text>{ `Name: ${username}` }</Text>
       <Text>{ `Level: ${level}` }</Text>
+      {!board && <Text> loading board... </Text>}
       <View style={{ padding: 8 }}>
         {
-          board.map((rowArray, indexRow) => {
+          shadow.map((rowArray, indexRow) => {
             return (
               <View style={ styles.column } key={ indexRow }>
                 {
                   rowArray.map((colCell, indexCol) => {
                     return (
                       <TextInput
-                        style={fancyStyle(board, indexRow, indexCol)}
+                        style={ fancyStyle(shadow, indexRow, indexCol) }
                         onChangeText={ (text) => onChangeText(text, indexRow, indexCol) }
                         value={ String(colCell) }
                         keyboardType = 'number-pad'
-                        editable={board[indexRow][indexCol] !==0 ? false : true}
+                        // editable={ disabledPos[indexRow][indexCol] }
                         key={ indexCol }
                       ></TextInput>
                     )
@@ -44,7 +88,13 @@ export default function Game({ navigation, route }) {
           })
         }
       </View>
-      <Button onPress={ () => { navigation.navigate('Finish') } } title="Go to finish"></Button>
+      <Button onPress={validate} title="Submit"></Button>
+      <Button
+        title="Solve"
+        onPress={() => {
+          solve(board)
+        }}
+      />
     </View>
   )
 }
